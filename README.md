@@ -1,4 +1,19 @@
-# Hex-Rays IDA MCP
+# IDA MCP — IDA 9.3 compatibility fork
+
+Unofficial compatibility fork of [HexRaysSA/ida-mcp](https://github.com/HexRaysSA/ida-mcp).
+Tested on Windows with IDA Professional 9.3. Keeps the real IDA version unchanged.
+
+**Start with [the IDA 9.3 installation guide](README-IDA93.md).** Install the patched
+[ida-nexus-93](https://github.com/dhsgud/ida-nexus-93) alongside this package.
+The upstream automatic installers below install the original 9.4+ implementation.
+
+Python cancellation, decompilation, database save/reopen and concurrent clients
+were tested. Long native calls may delay cancellation; GUI integration is unverified.
+Original MIT license and attribution are preserved.
+
+---
+
+# Upstream Hex-Rays IDA MCP documentation
 
 Official Hex-Rays IDA MCP Server, see the [announcement blog post](https://hex-rays.com/blog/hex-rays-ida-mcp-server) for more information.
 
