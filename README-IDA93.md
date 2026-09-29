@@ -6,7 +6,7 @@ IDA 실행 파일이나 보고되는 버전은 변경하지 않습니다. 실제
 ## 설치
 
 Git, uv, Python 3.11 이상과 idalib을 사용할 수 있는 IDA 9.3 설치가 필요합니다.
-검증 환경은 Windows / IDA Professional 9.3 / Python 3.12입니다.
+검증 환경은 Windows 및 macOS Apple Silicon / IDA Professional 9.3 / Python 3.12입니다.
 IDA 실행 파일과 라이선스는 이 저장소에 포함하지 않습니다.
 
 ```powershell
@@ -15,6 +15,19 @@ git clone --branch compatibility/ida-9.3 https://github.com/dhsgud/ida-nexus-93.
 cd ida-mcp-93
 uv venv --python 3.12 .venv
 uv pip install --python .venv\Scripts\python.exe ..\ida-nexus-93 .
+```
+
+macOS Apple Silicon에서는 두 저장소의 Mac 브랜치를 같은 부모 폴더에 복제합니다.
+터미널과 Python을 arm64로 실행하세요. Rosetta에서 실행한 x86_64 Python은
+arm64 `libidalib.dylib`을 로드할 수 없습니다.
+
+```sh
+git clone --branch compatibility/ida-9.3-macos-arm64 https://github.com/dhsgud/ida-mcp-93.git
+git clone --branch compatibility/ida-9.3-macos-arm64 https://github.com/dhsgud/ida-nexus-93.git
+cd ida-mcp-93
+uv venv --python 3.12 .venv
+uv pip install --python .venv/bin/python ../ida-nexus-93 .
+.venv/bin/python -c 'import platform; print(platform.machine())' # arm64
 ```
 
 **두 로컬 패키지를 함께 설치해야 합니다.** PyPI의 `ida-nexus`나 원본 HCLI
@@ -34,6 +47,20 @@ PYTHONUTF8 = "1"
 IDADIR = 'C:\Program Files\IDA Professional 9.3'
 ```
 
+macOS에서는 `~/.codex/config.toml`에 다음과 같이 등록합니다. IDA 설치 경로가
+다르면 `IDADIR` 값을 바꾸세요.
+
+```toml
+[mcp_servers.ida]
+command = "/absolute/path/to/ida-mcp-93/.venv/bin/ida-mcp"
+args = ["stdio", "--agent=codex"]
+startup_timeout_sec = 120
+
+[mcp_servers.ida.env]
+PYTHONUTF8 = "1"
+IDADIR = "/Applications/IDA Professional 9.3.app/Contents/MacOS"
+```
+
 Codex를 재시작하면 적용됩니다. 바이너리 경로를 전달하면 headless worker가
 열리므로 IDA GUI를 먼저 열 필요가 없습니다.
 
@@ -41,7 +68,8 @@ Codex를 재시작하면 적용됩니다. 바이너리 경로를 전달하면 he
 
 - MCP: `../ida-mcp-93`, upstream `d9e415dc88654cbb392802e5c55b3236c090155d`
 - Nexus: `../ida-nexus-93`, upstream `c470ed0a2c1671ce8ee5217d0131f4bcd79d58df`
-- 두 저장소의 호환 브랜치: `compatibility/ida-9.3`
+- 두 저장소의 호환 브랜치: Windows `compatibility/ida-9.3`, macOS Apple Silicon
+  `compatibility/ida-9.3-macos-arm64`
 - Python 3.12, IDA Professional 9.3
 - 실행 환경: `ida-mcp-93/.venv`
 - 패키지: ida-mcp 20260924.0.3, ida-nexus 0.13.0, ida-domain 0.5.1, idapro 0.0.10
@@ -76,6 +104,8 @@ Codex → MCP(stdio) → DatabaseManager → Nexus HTTP 서버
 
 ## 검증 결과
 
+Windows 검증:
+
 - Nexus 일반 테스트: **314 passed, 1 skipped**. 별도 IDA 실기 테스트 18개는 이 명령에서 제외.
 - MCP 도구·CLI·메타데이터 테스트: **44 passed**.
 - IDA 9.3 실기 테스트: **6 passed**. 복수 클라이언트, 저장 유지, 지연 분석,
@@ -86,11 +116,24 @@ Codex → MCP(stdio) → DatabaseManager → Nexus HTTP 서버
 - Windows `whoami.exe` 복사본: 함수 242개, 분석·저장·종료 통과.
 - 변경한 Python 파일의 Ruff 검사와 Git diff 공백 검사 통과.
 
+macOS 26.5.1 / Apple Silicon arm64 / IDA Professional 9.3.260327.45855dfd
+실기 검증: arm64 Python과 arm64 `libidalib.dylib`로 stdio MCP 초기화, 도구 조회,
+ELF 바이너리 열기, 분석, 디컴파일, 함수명 변경, 저장, 닫기, 재열기 후 변경 유지,
+worker 종료까지 `smoke_test_93.py` 통과. 함수 28개, 의사코드 224자와
+IDA 메인 스레드 실행을 확인했습니다. Windows 테스트 수치는 Mac에서 재실행한
+결과가 아닙니다.
+
 재현 가능한 MCP 통합 검사:
 
 ```powershell
 # 이 저장소 폴더에서 실행
 .\.venv\Scripts\python.exe .\smoke_test_93.py
+```
+
+macOS:
+
+```sh
+IDADIR="/Applications/IDA Professional 9.3.app/Contents/MacOS" .venv/bin/python smoke_test_93.py
 ```
 
 이 검사는 임시 디렉터리에 샘플을 복사하며, 로그와 DB 경로를 출력합니다.
@@ -114,6 +157,12 @@ Codex → MCP(stdio) → DatabaseManager → Nexus HTTP 서버
 
 ```powershell
 uv pip install --python .venv\Scripts\python.exe --reinstall --no-deps ..\ida-nexus-93 .
+```
+
+macOS:
+
+```sh
+uv pip install --python .venv/bin/python --reinstall --no-deps ../ida-nexus-93 .
 ```
 
 Python 3.12의 Windows 로캘 문제 때문에 한글 경로에서 editable(`-e`) 설치는
